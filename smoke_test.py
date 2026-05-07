@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
+from alchemy_glyph_router_api import run_alchemy_glyph_router
+from config import Settings
 from generator import generate_prompt, load_full_template
 from router import route_theme
 
@@ -144,6 +147,43 @@ def main() -> None:
 
     assert "金字塔" in f_final_prompt
     assert len(f_client.calls) == 2
+
+    api_client = StubLLMClient(
+        [
+            (
+                '{"selected_template":"C","route_reason":"主题核心是地面内部向上破土生成事件",'
+                '"fallback_needed":false,"fallback_target":null}'
+            ),
+            (
+                "纯黑画面中央先亮起一点温润的青木金绿色微光，下一瞬间一片半透明、富有生长感的地涌领域贴地展开，"
+                "中央区域随即出现局部隆起与裂开，一株轮廓清晰、尺度受控的树形主体从地面内部迅速破土而出，"
+                "伴随少量碎土、根须顶开地表与柔和生机流光，随后同步迅速失光并向内收束。"
+            ),
+        ]
+    )
+    api_settings = Settings(
+        base_url="https://example.invalid",
+        api_key="test-key",
+        model="gpt-5.4",
+        timeout_seconds=60.0,
+        log_level="INFO",
+        root_dir=root_dir,
+        outputs_dir=root_dir / "outputs",
+        logs_dir=root_dir / "logs",
+        cards_dir=root_dir / "templates" / "cards",
+        full_templates_dir=root_dir / "templates" / "full",
+    )
+
+    with patch("alchemy_glyph_router_api.load_settings", return_value=api_settings), patch(
+        "alchemy_glyph_router_api.LLMClient", return_value=api_client
+    ):
+        api_result = run_alchemy_glyph_router("树木破土而出")
+
+    assert api_result["route_selected"] == "C"
+    assert api_result["final_template"] == "C_eruption_full"
+    assert "破土" in api_result["final_prompt"]
+    assert api_result["model"] == "gpt-5.4"
+    assert len(api_client.calls) == 2
     print("smoke_test_passed")
 
 
