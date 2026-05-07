@@ -16,7 +16,12 @@ from router import route_theme
 
 FULL_TEMPLATE_MAP = {
     "A": "A_container_full",
+    "B1": "B1_fallback_full",
     "B2": "B2_rain_full",
+    "C": "C_eruption_full",
+    "D": "D_trail_full",
+    "E": "E_burst_full",
+    "F": "F_manifest_full",
 }
 
 
@@ -42,14 +47,11 @@ def main() -> int:
 
         fallback_applied = False
         final_route_code = route.selected_template
-        if route.selected_template == "B1":
-            final_route_code = route.fallback_target or "B2"
-            fallback_applied = True
-        elif route.fallback_needed and route.fallback_target:
-            final_route_code = route.fallback_target
-            fallback_applied = True
-
         final_template = FULL_TEMPLATE_MAP.get(final_route_code)
+        if not final_template and route.fallback_needed and route.fallback_target:
+            final_route_code = route.fallback_target
+            final_template = FULL_TEMPLATE_MAP.get(final_route_code)
+            fallback_applied = bool(final_template)
         if not final_template:
             raise ValueError(f"missing_full_template_mapping={final_route_code}")
 
